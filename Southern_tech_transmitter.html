@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Southern tech — Live Systems Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f1e9d6;
+    --paper-deep:#e7dcc2;
+    --card:#fbf7ec;
+    --ink:#1c2b2e;
+    --ink-soft:#5b6663;
+    --navy:#1c3d5a;
+    --navy-deep:#0f2436;
+    --teal:#2f6f6b;
+    --teal-soft:#e1ece9;
+    --amber:#c98a2b;
+    --amber-soft:#f7e8cf;
+    --coral:#b23a2e;
+    --coral-soft:#f6e0dd;
+    --line:#c9bfa0;
+    --line-strong:#a89b73;
+    --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.4;}
+  h1,h2,h3{font-family:var(--sans); margin:0; font-weight:600;}
+  p{margin:0;}
+
+  .app{max-width:1180px;margin:0 auto;padding:20px 24px 60px;}
+
+  header.topbar{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    flex-wrap:wrap;gap:16px;padding-bottom:16px;border-bottom:2px solid var(--line-strong);margin-bottom:20px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand svg{flex:none;}
+  .brand h1{font-size:24px;color:var(--navy-deep);letter-spacing:.2px;}
+  .brand p{font-size:13px;color:var(--ink-soft);margin-top:2px;}
+
+  nav.tabs{display:flex;gap:4px;background:var(--paper-deep);border:1px solid var(--line);border-radius:6px;padding:4px;}
+  .tab{
+    font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--ink-soft);
+    background:transparent;border:none;border-radius:4px;padding:9px 16px;cursor:pointer;
+    transition:background .15s, color .15s;
+  }
+  .tab:hover{color:var(--ink);}
+  .tab.active{background:var(--navy);color:#fdf9ee;}
+
+  section.scene{display:none;}
+  section.scene.active{display:grid;grid-template-columns:1.05fr 1fr;gap:20px;align-items:start;}
+  @media (max-width:880px){ section.scene.active{grid-template-columns:1fr;} }
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px;margin-bottom:16px;}
+  .card h2{font-size:13px;color:var(--navy-deep);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;}
+
+  .stage-wrap{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:16px;}
+  .stage{width:100%;display:block;background:var(--paper);}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px 16px;}
+  .chip{
+    font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.2px;
+    padding:5px 10px;border-radius:999px;border:1px solid var(--line-strong);
+    background:var(--paper-deep);color:var(--ink-soft);display:flex;align-items:center;gap:6px;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-soft);flex:none;}
+  .chip.ok{background:var(--teal-soft);color:var(--teal);border-color:var(--teal);}
+  .chip.ok .dot{background:var(--teal);}
+  .chip.warn{background:var(--amber-soft);color:var(--amber);border-color:var(--amber);}
+  .chip.warn .dot{background:var(--amber);}
+  .chip.bad{background:var(--coral-soft);color:var(--coral);border-color:var(--coral);}
+  .chip.bad .dot{background:var(--coral);}
+
+  .field{margin-bottom:14px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;}
+  .field label b{color:var(--ink);font-weight:600;font-family:var(--mono);}
+  input[type=range]{width:100%;height:4px;-webkit-appearance:none;background:var(--line-strong);border-radius:2px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--navy);cursor:pointer;border:2px solid var(--card);box-shadow:0 0 0 1px var(--navy);
+  }
+  .seg{display:flex;gap:6px;}
+  .seg button{
+    flex:1;font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--ink-soft);
+    background:var(--paper-deep);border:1px solid var(--line-strong);border-radius:4px;padding:7px 4px;cursor:pointer;
+  }
+  .seg button.active{background:var(--navy);color:#fdf9ee;border-color:var(--navy);}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;}
+  .switch{position:relative;width:40px;height:22px;background:var(--line-strong);border-radius:11px;cursor:pointer;flex:none;}
+  .switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--card);transition:left .15s;}
+  .switch.on{background:var(--teal);}
+  .switch.on::after{left:20px;}
+
+  .pipeline-group{margin-bottom:14px;}
+  .pipeline-group:last-child{margin-bottom:0;}
+  .pipeline-sub{font-size:11.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;}
+  .pipeline-sub .delta{font-family:var(--mono);font-weight:500;font-size:11px;}
+  .pipeline-row{display:flex;align-items:stretch;gap:5px;overflow-x:auto;padding-bottom:4px;}
+  .pstage{flex:1 0 96px;background:var(--paper-deep);border:1px solid var(--line);border-radius:5px;padding:7px 8px;text-align:center;}
+  .pstage .lbl{font-size:9.5px;color:var(--ink-soft);line-height:1.25;min-height:24px;display:flex;align-items:center;justify-content:center;}
+  .pstage .val{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--navy-deep);margin-top:4px;}
+  .parrow{flex:none;display:flex;align-items:center;color:var(--line-strong);font-size:13px;padding:0 1px;}
+  .pfinal{border-color:var(--teal);background:var(--teal-soft);}
+  .pfinal .val{color:var(--teal);}
+
+  table.telemetry{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;}
+  table.telemetry th{text-align:left;font-family:var(--sans);font-weight:600;font-size:11.5px;color:var(--ink-soft);
+    padding:4px 6px;border-bottom:1px solid var(--line-strong);}
+  table.telemetry td{padding:6px 6px;border-bottom:1px solid var(--line);}
+  table.telemetry td.num{text-align:right;color:var(--navy-deep);font-weight:600;}
+  table.telemetry td.raw{text-align:right;color:var(--ink-soft);}
+  table.telemetry td.err{text-align:right;color:var(--ink-soft);font-size:11px;}
+
+  .log{
+    font-family:var(--mono);font-size:11.5px;background:var(--navy-deep);color:#cfe6df;
+    border-radius:5px;padding:10px 12px;height:140px;overflow-y:auto;line-height:1.6;
+  }
+  .log .line{white-space:pre-wrap;}
+  .log .tag-lora{color:#8fd6c4;}
+  .log .tag-irid{color:#f0c37c;}
+  .log .tag-ship{color:#9cc7ec;}
+  .log .tag-none{color:#e59a92;}
+
+  footer{margin-top:8px;font-size:12px;color:var(--ink-soft);text-align:center;padding-top:14px;border-top:1px solid var(--line);}
+  .badge-theory{
+    display:inline-block;font-size:10.5px;font-weight:600;color:var(--coral);
+    background:var(--coral-soft);border:1px solid var(--coral);border-radius:999px;padding:2px 9px;
+  }
+  .subgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+  @media (max-width:520px){ .subgrid{grid-template-columns:1fr;} }
+
+  .netbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px;margin-bottom:18px;
+    background:var(--card);border:1px solid var(--line);border-radius:6px;}
+  .netbar label{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .netbar input[type=text]{font-family:var(--mono);font-size:12px;padding:6px 8px;border:1px solid var(--line-strong);
+    border-radius:5px;background:var(--paper);color:var(--ink);width:190px;}
+  .netbar .btn{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--navy-deep);background:var(--paper-deep);
+    border:1px solid var(--line-strong);border-radius:5px;padding:7px 12px;cursor:pointer;}
+  .netbar .btn:hover{background:var(--paper);}
+  .netbar .spacer{flex:1;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+        <circle cx="17" cy="17" r="16" stroke="#1c3d5a" stroke-width="1.6"/>
+        <path d="M17 3 L17 31 M3 17 L31 17" stroke="#1c3d5a" stroke-width="1" opacity="0.5"/>
+        <path d="M17 8 L20 17 L17 26 L14 17 Z" fill="#2f6f6b"/>
+        <circle cx="17" cy="17" r="2.4" fill="#c98a2b"/>
+      </svg>
+      <div>
+        <h1>Southern tech</h1>
+        <p>Autonomous ocean observation — live systems simulator</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="buoy">Coastal buoy</button>
+      <button class="tab" data-tab="moonpool">Polar moonpool <span style="opacity:.65;font-weight:500;">(concept)</span></button>
+    </nav>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="chip" id="gsStatusChip"><span class="dot"></span>Ground station: not connected</span>
+      <button class="tab" id="connectGsBtn" style="background:var(--teal);color:#fdf9ee;">Open ground station ↗</button>
+    </div>
+  </header>
+
+  <div class="netbar">
+    <label>Channel ID (must match on the receiver device)</label>
+    <input type="text" id="channelInput" value="">
+    <button class="btn" id="copyChannelBtn">Copy</button>
+    <button class="btn" id="newChannelBtn">New channel</button>
+    <div class="spacer"></div>
+    <span class="chip" id="netStatusChip"><span class="dot"></span>Network sync: idle</span>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- COASTAL BUOY                                                  -->
+  <!-- ============================================================ -->
+  <section id="buoy" class="scene active">
+
+    <div class="stage-col">
+      <div class="stage-wrap">
+        <svg class="stage" id="buoyStage" viewBox="0 0 560 320" preserveAspectRatio="xMidYMid slice">
+          <rect x="0" y="0" width="560" height="180" fill="var(--paper)"/>
+          <rect x="0" y="180" width="560" height="140" fill="var(--teal)"/>
+          <g id="waveLines" stroke="var(--card)" stroke-width="1" opacity="0.35"></g>
+          <rect x="0" y="150" width="70" height="170" fill="var(--paper-deep)"/>
+          <rect x="0" y="150" width="70" height="3" fill="var(--line-strong)"/>
+          <g id="satGroup" transform="translate(470,40)" opacity="0.9">
+            <rect x="-9" y="-4" width="18" height="8" rx="1.5" fill="var(--navy-deep)"/>
+            <rect x="-18" y="-2" width="8" height="4" fill="var(--ink-soft)"/>
+            <rect x="10" y="-2" width="8" height="4" fill="var(--ink-soft)"/>
+          </g>
+          <path id="satLink" d="M 306 190 L 470 40" stroke="var(--amber)" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.8"/>
+          <g id="buoyGroup" transform="translate(300,190)">
+            <line x1="0" y1="0" x2="0" y2="55" stroke="var(--navy-deep)" stroke-width="2"/>
+            <ellipse cx="0" cy="0" rx="34" ry="10" fill="var(--navy)"/>
+            <rect x="-30" y="-24" width="60" height="24" rx="4" fill="var(--card)" stroke="var(--navy)" stroke-width="1.6"/>
+            <rect id="solarPanel" x="-24" y="-20" width="48" height="12" rx="1.5" fill="var(--navy-deep)"/>
+            <line x1="0" y1="-24" x2="0" y2="-46" stroke="var(--navy-deep)" stroke-width="2"/>
+            <circle id="antennaLED" cx="0" cy="-48" r="3.4" fill="var(--amber)"/>
+            <rect x="-6" y="16" width="12" height="26" fill="var(--amber)" opacity="0.85"/>
+          </g>
+        </svg>
+      </div>
+      <div class="chips" id="buoyChips"></div>
+    </div>
+
+    <div class="panel-col">
+
+      <div class="card">
+        <h2>Conditions <span style="font-weight:500;font-size:11.5px;color:var(--ink-soft);">drag to change the true parameter values</span></h2>
+        <div class="field">
+          <label>Sea state (visual noise only)</label>
+          <div class="seg" id="seaStateSeg">
+            <button data-val="calm" class="active">Calm</button>
+            <button data-val="moderate">Moderate</button>
+            <button data-val="rough">Rough</button>
+          </div>
+        </div>
+        <div class="subgrid">
+          <div class="field">
+            <label>Depth <b id="bDepthLbl">6.0 m</b></label>
+            <input type="range" id="bDepth" min="0" max="30" step="0.1" value="6">
+          </div>
+          <div class="field">
+            <label>Water temperature <b id="bTempLbl">24.0 °C</b></label>
+            <input type="range" id="bTemp" min="-2" max="32" step="0.5" value="24">
+          </div>
+          <div class="field">
+            <label>Salinity <b id="bSalLbl">34.6 PSU</b></label>
+            <input type="range" id="bSal" min="28" max="40" step="0.1" value="34.6">
+          </div>
+          <div class="field">
+            <label>Chlorophyll-a <b id="bChlLbl">2.5 µg/L</b></label>
+            <input type="range" id="bChl" min="0" max="30" step="0.1" value="2.5">
+          </div>
+          <div class="field">
+            <label>pH <b id="bPHLbl">8.05</b></label>
+            <input type="range" id="bPH" min="7.5" max="8.6" step="0.01" value="8.05">
+          </div>
+        </div>
+        <div class="field toggle-row">
+          <label style="margin-bottom:0;">Daylight (solar charging)</label>
+          <div class="switch on" id="sunToggle"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Calibration pipelines</h2>
+
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Pressure → depth</span><span class="delta" id="bDepthErr"></span></div>
+          <div class="pipeline-row" id="bDepthPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Water temperature</span><span class="delta" id="bTempErr"></span></div>
+          <div class="pipeline-row" id="bTempPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Salinity (conductivity-derived)</span><span class="delta" id="bSalErr"></span></div>
+          <div class="pipeline-row" id="bSalPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Chlorophyll-a (fluorescence)</span><span class="delta" id="bChlErr"></span></div>
+          <div class="pipeline-row" id="bChlPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>pH (electrode)</span><span class="delta" id="bPHErr"></span></div>
+          <div class="pipeline-row" id="bPHPipe"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Sensor telemetry</h2>
+        <table class="telemetry">
+          <thead><tr><th>Parameter</th><th style="text-align:right;">Raw</th><th style="text-align:right;">Calibrated</th><th style="text-align:right;">Error vs true</th></tr></thead>
+          <tbody id="buoyTelemetry"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Comms log</h2>
+        <div class="log" id="buoyLog"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- POLAR MOONPOOL                                                -->
+  <!-- ============================================================ -->
+  <section id="moonpool" class="scene">
+
+    <div class="stage-col">
+      <div class="stage-wrap">
+        <svg class="stage" id="poolStage" viewBox="0 0 560 320" preserveAspectRatio="xMidYMid slice">
+          <rect x="0" y="0" width="560" height="150" fill="var(--paper)"/>
+          <rect x="0" y="150" width="560" height="170" fill="var(--teal)"/>
+          <rect id="iceLayer" x="0" y="150" width="560" height="14" fill="#e7f1f0" opacity="0"/>
+          <rect x="120" y="60" width="320" height="110" fill="var(--navy)"/>
+          <rect x="120" y="60" width="320" height="8" fill="var(--navy-deep)"/>
+          <line x1="120" y1="60" x2="120" y2="40" stroke="var(--navy-deep)" stroke-width="2"/>
+          <line x1="440" y1="60" x2="440" y2="40" stroke="var(--navy-deep)" stroke-width="2"/>
+          <rect x="255" y="60" width="50" height="140" fill="var(--paper)"/>
+          <rect x="255" y="60" width="50" height="140" fill="var(--teal)" opacity="0.9"/>
+          <rect x="252" y="58" width="4" height="150" fill="var(--navy-deep)"/>
+          <rect x="304" y="58" width="4" height="150" fill="var(--navy-deep)"/>
+          <rect x="266" y="30" width="28" height="12" rx="2" fill="var(--navy-deep)"/>
+          <line id="winchCable" x1="280" y1="42" x2="280" y2="80" stroke="var(--line-strong)" stroke-width="2"/>
+          <g id="sensorFrame" transform="translate(280,80)">
+            <rect x="-16" y="-8" width="32" height="16" rx="2" fill="var(--card)" stroke="var(--navy-deep)" stroke-width="1.6"/>
+            <circle cx="0" cy="0" r="3" fill="var(--amber)"/>
+          </g>
+          <g transform="translate(470,35)" opacity="0.5">
+            <rect x="-9" y="-4" width="18" height="8" rx="1.5" fill="var(--navy-deep)"/>
+            <rect x="-18" y="-2" width="8" height="4" fill="var(--ink-soft)"/>
+            <rect x="10" y="-2" width="8" height="4" fill="var(--ink-soft)"/>
+          </g>
+          <path id="poolSatLink" d="M 380 62 L 470 35" stroke="var(--amber)" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.8"/>
+        </svg>
+      </div>
+      <div class="chips" id="poolChips"></div>
+    </div>
+
+    <div class="panel-col">
+
+      <div class="card">
+        <h2>Conditions <span class="badge-theory">theoretical concept</span></h2>
+        <div class="field toggle-row">
+          <label style="margin-bottom:0;">Sensor frame deployed</label>
+          <div class="switch on" id="deployToggle"></div>
+        </div>
+        <div class="field toggle-row" style="margin-top:12px;margin-bottom:14px;">
+          <label style="margin-bottom:0;">Sea-ice cover overhead</label>
+          <div class="switch" id="iceToggle"></div>
+        </div>
+        <div class="subgrid">
+          <div class="field">
+            <label>Depth <b id="pDepthLbl">1.2 m</b></label>
+            <input type="range" id="pDepth" min="0" max="30" step="0.1" value="1.2">
+          </div>
+          <div class="field">
+            <label>Water temperature <b id="pTempLbl">-1.5 °C</b></label>
+            <input type="range" id="pTemp" min="-2" max="6" step="0.1" value="-1.5">
+          </div>
+          <div class="field">
+            <label>Salinity <b id="pSalLbl">33.8 PSU</b></label>
+            <input type="range" id="pSal" min="28" max="40" step="0.1" value="33.8">
+          </div>
+          <div class="field">
+            <label>Chlorophyll-a <b id="pChlLbl">0.5 µg/L</b></label>
+            <input type="range" id="pChl" min="0" max="30" step="0.1" value="0.5">
+          </div>
+          <div class="field">
+            <label>pH <b id="pPHLbl">8.10</b></label>
+            <input type="range" id="pPH" min="7.5" max="8.6" step="0.01" value="8.10">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Calibration pipelines</h2>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Pressure → depth</span><span class="delta" id="pDepthErr"></span></div>
+          <div class="pipeline-row" id="pDepthPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Water temperature</span><span class="delta" id="pTempErr"></span></div>
+          <div class="pipeline-row" id="pTempPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Salinity (conductivity-derived)</span><span class="delta" id="pSalErr"></span></div>
+          <div class="pipeline-row" id="pSalPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>Chlorophyll-a (fluorescence)</span><span class="delta" id="pChlErr"></span></div>
+          <div class="pipeline-row" id="pChlPipe"></div>
+        </div>
+        <div class="pipeline-group">
+          <div class="pipeline-sub"><span>pH (electrode)</span><span class="delta" id="pPHErr"></span></div>
+          <div class="pipeline-row" id="pPHPipe"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Sensor telemetry</h2>
+        <table class="telemetry">
+          <thead><tr><th>Parameter</th><th style="text-align:right;">Raw</th><th style="text-align:right;">Calibrated</th><th style="text-align:right;">Error vs true</th></tr></thead>
+          <tbody id="poolTelemetry"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Comms log</h2>
+        <div class="log" id="poolLog"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    Simulated data for demonstration purposes only — values follow the calibration model described in the project's technical documents, not measurements from physical hardware.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+  function fmt(n,d){ return n.toFixed(d); }
+  function timestamp(){ return new Date().toTimeString().slice(0,8); }
+
+  // ---------------- tabs ----------------
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  function buildPipeline(container, stages){
+    container.innerHTML = '';
+    stages.forEach((s,i)=>{
+      if(i>0){ const a=document.createElement('div'); a.className='parrow'; a.textContent='→'; container.appendChild(a); }
+      const box=document.createElement('div');
+      box.className='pstage'+(i===stages.length-1?' pfinal':'');
+      box.innerHTML=`<div class="lbl">${s.label}</div><div class="val" id="${s.id}">--</div>`;
+      container.appendChild(box);
+    });
+  }
+
+  function logLine(el, text, cls){
+    const d=document.createElement('div'); d.className='line'+(cls?' '+cls:''); d.textContent=text;
+    el.appendChild(d);
+    while(el.children.length>40){ el.removeChild(el.firstChild); }
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function chip(label, state){ return `<span class="chip ${state==='neutral'?'':state}"><span class="dot"></span>${label}</span>`; }
+
+  // ---------------- ground station connection ----------------
+  const RECEIVER_FILE = 'southern-tech-ground-station-dashboard.html';
+  let receiverWin = null;
+
+  function setGsChip(connected){
+    const el = $('gsStatusChip');
+    el.className = 'chip' + (connected ? ' ok' : '');
+    el.innerHTML = `<span class="dot"></span>Ground station: ${connected ? 'connected' : 'not connected'}`;
+  }
+
+  $('connectGsBtn').addEventListener('click', ()=>{
+    if(receiverWin && !receiverWin.closed){ receiverWin.focus(); return; }
+    receiverWin = window.open(RECEIVER_FILE, 'groundStation');
+    if(!receiverWin){
+      alert('Pop-up blocked. Please allow pop-ups for this page, or open '+RECEIVER_FILE+' manually alongside this file.');
+      return;
+    }
+    $('connectGsBtn').textContent = 'Ground station opened ↗';
+    setGsChip(true);
+  });
+
+  // periodically confirm the receiver window is still alive
+  setInterval(()=>{
+    if(receiverWin && receiverWin.closed){
+      setGsChip(false);
+      $('connectGsBtn').textContent = 'Open ground station ↗';
+      receiverWin = null;
+    }
+  }, 1500);
+
+  function sendPacket(source, mode, payload){
+    const full = Object.assign({ source, mode, ts: Date.now() }, payload);
+    if(receiverWin && !receiverWin.closed){
+      try{ receiverWin.postMessage({ type:'packet', payload: full }, '*'); }catch(e){}
+    }
+    publishToChannel(full);
+  }
+
+  // ---------------- cross-device network sync (via ntfy.sh public relay) ----------------
+  function randomChannel(){
+    return 'bblue-' + Math.random().toString(36).slice(2,10);
+  }
+  const channelInput = $('channelInput');
+  channelInput.value = randomChannel();
+
+  function setNetChip(state_, text){
+    const el = $('netStatusChip');
+    el.className = 'chip' + (state_ ? ' '+state_ : '');
+    el.innerHTML = `<span class="dot"></span>${text}`;
+  }
+
+  $('copyChannelBtn').addEventListener('click', ()=>{
+    channelInput.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    if(navigator.clipboard){ navigator.clipboard.writeText(channelInput.value).catch(()=>{}); }
+    setNetChip('ok', 'Channel ID copied — paste it on the receiver device');
+    setTimeout(()=> setNetChip('', 'Network sync: idle'), 2500);
+  });
+  $('newChannelBtn').addEventListener('click', ()=>{
+    channelInput.value = randomChannel();
+  });
+
+  let netOkStreak = 0;
+  function publishToChannel(payload){
+    const channel = channelInput.value.trim();
+    if(!channel) return;
+    fetch('https://ntfy.sh/'+encodeURIComponent(channel), {
+      method:'POST',
+      body: JSON.stringify(payload)
+    }).then(()=>{
+      netOkStreak++;
+      setNetChip('ok', 'Network sync: publishing to "'+channel+'"');
+    }).catch(()=>{
+      setNetChip('bad', 'Network sync: publish failed — check internet connection');
+    });
+  }
+
+  // ---------------- shared calibration models ----------------
+  function calcDepthPipeline(trueDepth, trueTemp, trueSalinity, atmTrue, noiseAmp){
+    const g=9.80665;
+    const rho = 1025 + (trueTemp-20)*(-0.25) + (trueSalinity-34.6)*0.75;
+    const truePressureKPa = atmTrue + (rho*g*Math.max(trueDepth,0))/1000;
+    const sensorOffset=0.15, tempDriftCoeff=0.018;
+    const rawKPa = truePressureKPa + sensorOffset + (trueTemp-20)*tempDriftCoeff + rnd(-noiseAmp,noiseAmp);
+    const sensorCorrected = rawKPa - sensorOffset;
+    const tempCorrected = sensorCorrected - (trueTemp-20)*tempDriftCoeff;
+    const atmMeasured = atmTrue + rnd(-0.05,0.05);
+    const gaugeKPa = tempCorrected - atmMeasured;
+    const calibratedDepth = Math.max(0,(gaugeKPa*1000)/(rho*g));
+    return {rawKPa, sensorCorrected, tempCorrected, gaugeKPa, calibratedDepth};
+  }
+  function calcTempPipeline(trueTemp){
+    const selfHeat=0.12;
+    const raw = trueTemp + selfHeat + rnd(-0.05,0.05);
+    const calibrated = raw - selfHeat + rnd(-0.01,0.01);
+    return {raw, calibrated};
+  }
+  function calcSalinityPipeline(trueSalinity, measuredTemp){
+    const k=0.12, kt=0.04;
+    const trueCond = 3.0 + (trueSalinity-30)*k + (measuredTemp-20)*kt;
+    const rawCond = trueCond + rnd(-0.02,0.02);
+    const tempComp = rawCond - (measuredTemp-20)*kt;
+    const calibratedSalinity = 30 + (tempComp-3.0)/k;
+    return {rawCond, tempComp, calibratedSalinity};
+  }
+  function calcChlPipeline(trueChl){
+    const gain=10, dark=15;
+    const rawCounts = trueChl*gain + dark + rnd(-3,3);
+    const darkCorrected = rawCounts-dark;
+    const calibratedChl = Math.max(0, darkCorrected/gain);
+    return {rawCounts, darkCorrected, calibratedChl};
+  }
+  function calcPHPipeline(truePH){
+    const drift = 0.06; // electrode drift, removed via reference-buffer calibration
+    const raw = truePH + drift + rnd(-0.02,0.02);
+    const calibrated = raw - drift + rnd(-0.01,0.01);
+    return {raw, calibrated};
+  }
+
+  const DEPTH_STAGES=[
+    {id:'stgRaw',label:'Raw sensor (kPa)'},
+    {id:'stgSensor',label:'Sensor-cal corrected'},
+    {id:'stgTemp',label:'Temp-drift corrected'},
+    {id:'stgAtm',label:'Atmospheric-corrected'},
+    {id:'stgDepth',label:'Calibrated depth (m)'},
+  ];
+  const TEMP_STAGES=[
+    {id:'stgTRaw',label:'Raw thermistor (°C)'},
+    {id:'stgTCal',label:'Calibrated (°C)'},
+  ];
+  const SAL_STAGES=[
+    {id:'stgSRaw',label:'Raw conductivity (mS/cm)'},
+    {id:'stgSComp',label:'Temp-compensated'},
+    {id:'stgSCal',label:'Calibrated salinity (PSU)'},
+  ];
+  const CHL_STAGES=[
+    {id:'stgCRaw',label:'Raw fluorescence (counts)'},
+    {id:'stgCDark',label:'Dark-offset corrected'},
+    {id:'stgCCal',label:'Calibrated chl-a (µg/L)'},
+  ];
+  const PH_STAGES=[
+    {id:'stgPRaw',label:'Raw electrode (pH)'},
+    {id:'stgPCal',label:'Calibrated pH'},
+  ];
+
+  function prefixed(stages, p){ return stages.map(s=>({id:p+s.id, label:s.label})); }
+
+  buildPipeline($('bDepthPipe'), prefixed(DEPTH_STAGES,'b_'));
+  buildPipeline($('bTempPipe'), prefixed(TEMP_STAGES,'b_'));
+  buildPipeline($('bSalPipe'), prefixed(SAL_STAGES,'b_'));
+  buildPipeline($('bChlPipe'), prefixed(CHL_STAGES,'b_'));
+  buildPipeline($('bPHPipe'), prefixed(PH_STAGES,'b_'));
+  buildPipeline($('pDepthPipe'), prefixed(DEPTH_STAGES,'p_'));
+  buildPipeline($('pTempPipe'), prefixed(TEMP_STAGES,'p_'));
+  buildPipeline($('pSalPipe'), prefixed(SAL_STAGES,'p_'));
+  buildPipeline($('pChlPipe'), prefixed(CHL_STAGES,'p_'));
+  buildPipeline($('pPHPipe'), prefixed(PH_STAGES,'p_'));
+
+  function fillDepthStages(prefix, r){
+    $(prefix+'stgRaw').textContent=fmt(r.rawKPa,3);
+    $(prefix+'stgSensor').textContent=fmt(r.sensorCorrected,3);
+    $(prefix+'stgTemp').textContent=fmt(r.tempCorrected,3);
+    $(prefix+'stgAtm').textContent=fmt(r.gaugeKPa,3);
+    $(prefix+'stgDepth').textContent=fmt(r.calibratedDepth,3)+' m';
+  }
+  function fillTempStages(prefix, r){
+    $(prefix+'stgTRaw').textContent=fmt(r.raw,2);
+    $(prefix+'stgTCal').textContent=fmt(r.calibrated,2);
+  }
+  function fillSalStages(prefix, r){
+    $(prefix+'stgSRaw').textContent=fmt(r.rawCond,3);
+    $(prefix+'stgSComp').textContent=fmt(r.tempComp,3);
+    $(prefix+'stgSCal').textContent=fmt(r.calibratedSalinity,2);
+  }
+  function fillChlStages(prefix, r){
+    $(prefix+'stgCRaw').textContent=fmt(r.rawCounts,1);
+    $(prefix+'stgCDark').textContent=fmt(r.darkCorrected,1);
+    $(prefix+'stgCCal').textContent=fmt(r.calibratedChl,2)+' µg/L';
+  }
+  function fillPHStages(prefix, r){
+    $(prefix+'stgPRaw').textContent=fmt(r.raw,3);
+    $(prefix+'stgPCal').textContent=fmt(r.calibrated,3);
+  }
+
+  function errTag(err, unit, tol){
+    const abs = Math.abs(err);
+    const cls = abs<=tol ? 'ok' : (abs<=tol*2.5 ? 'warn':'bad');
+    const color = cls==='ok' ? 'var(--teal)' : (cls==='warn' ? 'var(--amber)':'var(--coral)');
+    return `<span style="color:${color}">±${fmt(abs,3)} ${unit}</span>`;
+  }
+
+  // ---------------- wave texture ----------------
+  (function(){ const g=$('waveLines'); let html=''; for(let y=190;y<320;y+=18){ html+=`<line x1="0" y1="${y}" x2="560" y2="${y}"/>`; } g.innerHTML=html; })();
+
+  // ================================================================
+  // COASTAL BUOY
+  // ================================================================
+  const buoy = { seaState:'calm', depth:6, temp:24, sal:34.6, chl:2.5, ph:8.05, sunlight:true, battery:82, t:0 };
+
+  document.querySelectorAll('#seaStateSeg button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('#seaStateSeg button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); buoy.seaState=b.dataset.val;
+    });
+  });
+  $('bDepth').addEventListener('input', e=>{ buoy.depth=parseFloat(e.target.value); $('bDepthLbl').textContent=fmt(buoy.depth,1)+' m'; });
+  $('bTemp').addEventListener('input', e=>{ buoy.temp=parseFloat(e.target.value); $('bTempLbl').textContent=fmt(buoy.temp,1)+' °C'; });
+  $('bSal').addEventListener('input', e=>{ buoy.sal=parseFloat(e.target.value); $('bSalLbl').textContent=fmt(buoy.sal,1)+' PSU'; });
+  $('bChl').addEventListener('input', e=>{ buoy.chl=parseFloat(e.target.value); $('bChlLbl').textContent=fmt(buoy.chl,1)+' µg/L'; });
+  $('bPH').addEventListener('input', e=>{ buoy.ph=parseFloat(e.target.value); $('bPHLbl').textContent=fmt(buoy.ph,2); });
+  $('sunToggle').addEventListener('click', ()=>{ buoy.sunlight=!buoy.sunlight; $('sunToggle').classList.toggle('on', buoy.sunlight); });
+
+  function waveAmplitude(s){ return s==='calm'?4:(s==='moderate'?10:22); }
+  function waveSpeed(s){ return s==='calm'?0.9:(s==='moderate'?1.6:2.6); }
+  function pressureNoise(s){ return s==='calm'?0.03:(s==='moderate'?0.08:0.18); }
+
+  function updateBuoy(){
+    buoy.t += 0.12;
+    const amp = waveAmplitude(buoy.seaState), speed = waveSpeed(buoy.seaState);
+    const bob = Math.sin(buoy.t*speed)*amp;
+    $('buoyGroup').setAttribute('transform', `translate(300, ${190+bob*0.4})`);
+
+    const trueDepthNow = Math.max(0, buoy.depth + (amp/1000)*Math.sin(buoy.t*speed));
+    const atmTrue = 101.325 + Math.sin(buoy.t*0.05)*0.4;
+
+    const dRes = calcDepthPipeline(trueDepthNow, buoy.temp, buoy.sal, atmTrue, pressureNoise(buoy.seaState));
+    fillDepthStages('b_', dRes);
+    const tRes = calcTempPipeline(buoy.temp);
+    fillTempStages('b_', tRes);
+    const sRes = calcSalinityPipeline(buoy.sal, tRes.calibrated);
+    fillSalStages('b_', sRes);
+    const cRes = calcChlPipeline(buoy.chl);
+    fillChlStages('b_', cRes);
+    const pRes = calcPHPipeline(buoy.ph);
+    fillPHStages('b_', pRes);
+
+    $('bDepthErr').innerHTML = errTag(dRes.calibratedDepth-trueDepthNow,'m',0.02);
+    $('bTempErr').innerHTML = errTag(tRes.calibrated-buoy.temp,'°C',0.05);
+    $('bSalErr').innerHTML = errTag(sRes.calibratedSalinity-buoy.sal,'PSU',0.1);
+    $('bChlErr').innerHTML = errTag(cRes.calibratedChl-buoy.chl,'µg/L',0.3);
+    $('bPHErr').innerHTML = errTag(pRes.calibrated-buoy.ph,'pH',0.02);
+
+    const atmTempRaw = buoy.temp + 2.2 + rnd(-4,2);
+    const atmTempCal = buoy.temp + 2.2;
+
+    $('buoyTelemetry').innerHTML = `
+      <tr><td>Pressure / depth</td><td class="raw">${fmt(dRes.rawKPa,2)} kPa</td><td class="num">${fmt(dRes.calibratedDepth,3)} m</td><td class="err">${errTag(dRes.calibratedDepth-trueDepthNow,'m',0.02)}</td></tr>
+      <tr><td>Water temperature</td><td class="raw">${fmt(tRes.raw,2)} °C</td><td class="num">${fmt(tRes.calibrated,2)} °C</td><td class="err">${errTag(tRes.calibrated-buoy.temp,'°C',0.05)}</td></tr>
+      <tr><td>Atmospheric temperature</td><td class="raw">${fmt(atmTempRaw,2)} °C</td><td class="num">${fmt(atmTempCal,2)} °C</td><td class="err">—</td></tr>
+      <tr><td>Salinity</td><td class="raw">${fmt(sRes.rawCond,2)} mS/cm</td><td class="num">${fmt(sRes.calibratedSalinity,2)} PSU</td><td class="err">${errTag(sRes.calibratedSalinity-buoy.sal,'PSU',0.1)}</td></tr>
+      <tr><td>Chlorophyll-a</td><td class="raw">${fmt(cRes.rawCounts,1)} cts</td><td class="num">${fmt(cRes.calibratedChl,2)} µg/L</td><td class="err">${errTag(cRes.calibratedChl-buoy.chl,'µg/L',0.3)}</td></tr>
+      <tr><td>pH</td><td class="raw">${fmt(pRes.raw,3)}</td><td class="num">${fmt(pRes.calibrated,3)}</td><td class="err">${errTag(pRes.calibrated-buoy.ph,'pH',0.02)}</td></tr>
+    `;
+
+    buoy.battery += buoy.sunlight ? 0.15 : -0.08;
+    buoy.battery = Math.max(0, Math.min(100, buoy.battery));
+
+    $('antennaLED').setAttribute('fill', 'var(--amber)');
+    $('satLink').setAttribute('opacity', 0.8);
+    $('solarPanel').setAttribute('fill', buoy.sunlight ? 'var(--amber)' : 'var(--navy-deep)');
+
+    $('buoyChips').innerHTML = [
+      chip('Comms: Iridium', 'ok'),
+      chip('Battery '+Math.round(buoy.battery)+'%', buoy.battery>30?'ok':'bad'),
+      chip('Sea state: '+buoy.seaState, 'neutral'),
+      chip('GPS: fix', 'ok'),
+    ].join('');
+
+    if(Math.round(buoy.t*10)%30===0){
+      logLine($('buoyLog'),
+        `[${timestamp()}] IRID tx  d=${fmt(dRes.calibratedDepth,3)}m  T=${fmt(tRes.calibrated,1)}C  sal=${fmt(sRes.calibratedSalinity,1)}PSU  chl=${fmt(cRes.calibratedChl,2)}ug/L  pH=${fmt(pRes.calibrated,2)}  batt=${Math.round(buoy.battery)}%`,
+        'tag-irid');
+      sendPacket('buoy', 'Iridium', {
+        depth: dRes.calibratedDepth,
+        waterTemp: tRes.calibrated,
+        atmTemp: atmTempCal,
+        sal: sRes.calibratedSalinity,
+        chl: cRes.calibratedChl,
+        ph: pRes.calibrated,
+        battery: buoy.battery
+      });
+    }
+  }
+
+  // ================================================================
+  // POLAR MOONPOOL
+  // ================================================================
+  const pool = { deployed:true, iceCover:false, depth:1.2, temp:-1.5, sal:33.8, chl:0.5, ph:8.10, t:0 };
+
+  $('deployToggle').addEventListener('click', ()=>{ pool.deployed=!pool.deployed; $('deployToggle').classList.toggle('on', pool.deployed); });
+  $('iceToggle').addEventListener('click', ()=>{ pool.iceCover=!pool.iceCover; $('iceToggle').classList.toggle('on', pool.iceCover); $('iceLayer').setAttribute('opacity', pool.iceCover?0.9:0); });
+  $('pDepth').addEventListener('input', e=>{ pool.depth=parseFloat(e.target.value); $('pDepthLbl').textContent=fmt(pool.depth,1)+' m'; });
+  $('pTemp').addEventListener('input', e=>{ pool.temp=parseFloat(e.target.value); $('pTempLbl').textContent=fmt(pool.temp,1)+' °C'; });
+  $('pSal').addEventListener('input', e=>{ pool.sal=parseFloat(e.target.value); $('pSalLbl').textContent=fmt(pool.sal,1)+' PSU'; });
+  $('pChl').addEventListener('input', e=>{ pool.chl=parseFloat(e.target.value); $('pChlLbl').textContent=fmt(pool.chl,1)+' µg/L'; });
+  $('pPH').addEventListener('input', e=>{ pool.ph=parseFloat(e.target.value); $('pPHLbl').textContent=fmt(pool.ph,2); });
+
+  function updatePool(){
+    pool.t += 0.1;
+    const targetY = pool.deployed ? 80 : 40;
+    $('sensorFrame').setAttribute('transform', `translate(280, ${targetY})`);
+    $('winchCable').setAttribute('y2', targetY-2);
+
+    if(!pool.deployed){
+      $('poolTelemetry').innerHTML = `<tr><td colspan="4" style="color:var(--ink-soft);text-align:center;">— sensor frame retracted, no data —</td></tr>`;
+      ['pDepthPipe','pTempPipe','pSalPipe','pChlPipe','pPHPipe'].forEach(id=>{ $(id).querySelectorAll('.val').forEach(v=>v.textContent='--'); });
+      ['pDepthErr','pTempErr','pSalErr','pChlErr','pPHErr'].forEach(id=>{ $(id).textContent=''; });
+      $('poolSatLink').setAttribute('opacity', 0);
+      $('poolChips').innerHTML = [ chip('Frame: retracted','neutral'), chip('GPS: n/a','neutral'), chip('Comms: idle','neutral') ].join('');
+      return;
+    }
+
+    const atmTrue = 100.9 + Math.sin(pool.t*0.04)*0.3;
+    const dRes = calcDepthPipeline(pool.depth, pool.temp, pool.sal, atmTrue, 0.04);
+    fillDepthStages('p_', dRes);
+    const tRes = calcTempPipeline(pool.temp);
+    fillTempStages('p_', tRes);
+    const sRes = calcSalinityPipeline(pool.sal, tRes.calibrated);
+    fillSalStages('p_', sRes);
+    const cRes = calcChlPipeline(pool.chl);
+    fillChlStages('p_', cRes);
+    const pRes = calcPHPipeline(pool.ph);
+    fillPHStages('p_', pRes);
+
+    $('pDepthErr').innerHTML = errTag(dRes.calibratedDepth-pool.depth,'m',0.02);
+    $('pTempErr').innerHTML = errTag(tRes.calibrated-pool.temp,'°C',0.05);
+    $('pSalErr').innerHTML = errTag(sRes.calibratedSalinity-pool.sal,'PSU',0.1);
+    $('pChlErr').innerHTML = errTag(cRes.calibratedChl-pool.chl,'µg/L',0.3);
+    $('pPHErr').innerHTML = errTag(pRes.calibrated-pool.ph,'pH',0.02);
+
+    const atmTempRaw = -6 + rnd(-2,1);
+    $('poolTelemetry').innerHTML = `
+      <tr><td>Pressure / depth</td><td class="raw">${fmt(dRes.rawKPa,2)} kPa</td><td class="num">${fmt(dRes.calibratedDepth,3)} m</td><td class="err">${errTag(dRes.calibratedDepth-pool.depth,'m',0.02)}</td></tr>
+      <tr><td>Water temperature</td><td class="raw">${fmt(tRes.raw,2)} °C</td><td class="num">${fmt(tRes.calibrated,2)} °C</td><td class="err">${errTag(tRes.calibrated-pool.temp,'°C',0.05)}</td></tr>
+      <tr><td>Atmospheric temperature</td><td class="raw">${fmt(atmTempRaw,2)} °C</td><td class="num">${fmt(atmTempRaw+1.4,2)} °C</td><td class="err">—</td></tr>
+      <tr><td>Salinity</td><td class="raw">${fmt(sRes.rawCond,2)} mS/cm</td><td class="num">${fmt(sRes.calibratedSalinity,2)} PSU</td><td class="err">${errTag(sRes.calibratedSalinity-pool.sal,'PSU',0.1)}</td></tr>
+      <tr><td>Chlorophyll-a</td><td class="raw">${fmt(cRes.rawCounts,1)} cts</td><td class="num">${fmt(cRes.calibratedChl,2)} µg/L</td><td class="err">${errTag(cRes.calibratedChl-pool.chl,'µg/L',0.3)}</td></tr>
+      <tr><td>pH</td><td class="raw">${fmt(pRes.raw,3)}</td><td class="num">${fmt(pRes.calibrated,3)}</td><td class="err">${errTag(pRes.calibrated-pool.ph,'pH',0.02)}</td></tr>
+    `;
+
+    const gpsFix = !pool.iceCover;
+    $('poolSatLink').setAttribute('opacity', 0.85);
+
+    $('poolChips').innerHTML = [
+      chip('Frame: deployed','ok'),
+      chip('GPS: '+(gpsFix?'fix':'no fix (ice)'), gpsFix?'ok':'bad'),
+      chip('Comms: Iridium','ok'),
+      chip('Ice cover: '+(pool.iceCover?'yes':'no'), pool.iceCover?'warn':'neutral'),
+    ].join('');
+
+    if(Math.round(pool.t*10)%30===0){
+      logLine($('poolLog'),
+        `[${timestamp()}] IRID tx  d=${fmt(dRes.calibratedDepth,3)}m  T=${fmt(tRes.calibrated,1)}C  sal=${fmt(sRes.calibratedSalinity,1)}PSU  chl=${fmt(cRes.calibratedChl,2)}ug/L  pH=${fmt(pRes.calibrated,2)}  gps=${gpsFix?'fix':'none'}`,
+        'tag-irid');
+      sendPacket('moonpool', 'Iridium', {
+        depth: dRes.calibratedDepth,
+        waterTemp: tRes.calibrated,
+        atmTemp: atmTempRaw+1.4,
+        sal: sRes.calibratedSalinity,
+        chl: cRes.calibratedChl,
+        ph: pRes.calibrated,
+        battery: null,
+        gpsFix
+      });
+    }
+  }
+
+  setInterval(()=>{ updateBuoy(); updatePool(); }, 200);
+  updateBuoy(); updatePool();
+
+})();
+</script>
+</body>
+</html>
